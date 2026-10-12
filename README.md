@@ -43,27 +43,54 @@ Take a screenshot of a receipt and it lands in `Receipts/Food & Dining/Chipotle`
 
 ## Install
 
-Requirements: macOS 14 or later and the Xcode Command Line Tools (`xcode-select --install`). Xcode itself is not needed.
+**[Download the latest Shotshelf.dmg](https://github.com/rikenpatel02/shotshelf/releases/latest)**, open it and drag Shotshelf onto Applications. Requires macOS 14 Sonoma or later, on Apple silicon or Intel.
+
+The download is not notarized by Apple yet, so macOS stops it the first time you open it:
+
+- **macOS 15 Sequoia and later:** click **Done**, open **System Settings > Privacy & Security**, scroll to the message about Shotshelf and click **Open Anyway**.
+- **macOS 14 Sonoma:** Control-click Shotshelf in Applications, choose **Open**, then **Open** again.
+
+You only do this once.
+
+### First launch
+
+| What you see | Why |
+|---|---|
+| A welcome window | Pick the screenshots folder (default `~/Pictures/Screenshots`), whether new screenshots save there, whether to move the ones already on your Desktop, and optionally your code folder. Nothing is read or moved before you click **Get Started**. |
+| "Shotshelf would like to access files in your Desktop folder" (or Documents, Downloads) | Only for folders you chose that macOS protects. Shotshelf reads them on your Mac. |
+| "Shotshelf would like to send you notifications" | The banner after each sort, with its **Move...** button. Optional. |
+| "Background item added" | Shotshelf opens at login to sort in the background. Turn it off in Settings or in **System Settings > General > Login Items**. |
+
+No other permissions are needed: no Screen Recording, Accessibility or Full Disk Access, and no network access. The **Option-Command-S** shortcut works without any permission.
+
+### Build from source
+
+Requires the Xcode Command Line Tools (`xcode-select --install`). Xcode itself is not needed.
 
 ```bash
 git clone https://github.com/rikenpatel02/shotshelf.git
 cd shotshelf
 ./build.sh --install          # builds Shotshelf.app and copies it to /Applications
-open /Applications/Shotshelf.app
 ```
-
-On first launch Shotshelf asks where your screenshots should live (default `~/Pictures/Screenshots`) and can point macOS's screenshot location there for you. Allow notifications if you want the Move button after each sort.
 
 `./build.sh --universal` builds for both Apple silicon and Intel.
 
-### Folder permissions and rebuilding
-
-macOS asks once for permission to read protected folders like Desktop or Documents. An unsigned (ad hoc) build counts as a new app every time you rebuild, so macOS asks again. To avoid that, create a local signing identity once; `build.sh` uses it automatically:
+macOS asks once for permission to read protected folders like Desktop or Documents. An ad hoc signed build counts as a new app every time you rebuild, so macOS asks again. To avoid that, create a local signing identity once; `build.sh` uses it automatically:
 
 1. Open **Keychain Access** > **Certificate Assistant** > **Create a Certificate...**
 2. Name it `Shotshelf Local Signing`, Identity Type **Self Signed Root**, Certificate Type **Code Signing**.
 
 Or set `SHOTSHELF_SIGN_IDENTITY` to the name of any code-signing identity you already have.
+
+### Releasing
+
+Push a version tag and GitHub Actions builds a universal `Shotshelf-VERSION.dmg` and publishes it as a release:
+
+```bash
+git tag v1.0.1 && git push origin v1.0.1
+```
+
+`tools/release.sh 1.0.1` does the same locally, into `dist/`. To ship a build that opens without the warning above, add a Developer ID certificate and notarization credentials as repository secrets (see [`.github/workflows/release.yml`](.github/workflows/release.yml)); the workflow signs and notarizes automatically when they are present.
 
 ## Configuration
 

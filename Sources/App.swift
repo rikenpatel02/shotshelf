@@ -19,7 +19,7 @@ struct ShotshelfApp: App {
         MenuBarExtra {
             MenuBarContent().environment(library)
         } label: {
-            Image(systemName: library.paused ? "photo.on.rectangle" : "photo.stack.fill")
+            MenuBarIcon().environment(library)
         }
 
         Window("Expenses", id: "expenses") {
@@ -35,6 +35,21 @@ struct ShotshelfApp: App {
         Settings {
             SettingsView().environment(library).tint(.indigo)
         }
+    }
+}
+
+/// The menu bar icon is the one view that always exists, so it hands the window opener to the
+/// library (for the hotkey and notifications) and shows the welcome window on first run.
+struct MenuBarIcon: View {
+    @Environment(Library.self) private var lib
+    @Environment(\.openWindow) private var openWindow
+
+    var body: some View {
+        Image(systemName: lib.paused ? "photo.on.rectangle" : "photo.stack.fill")
+            .task {
+                if lib.openWindow == nil { lib.openWindow = { id in openWindow(id: id) } }
+                if lib.showWelcome { lib.showWindow() }
+            }
     }
 }
 

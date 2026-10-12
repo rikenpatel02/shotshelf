@@ -3,17 +3,21 @@
 #   ./build.sh              build for this Mac
 #   ./build.sh --universal  build for Apple silicon and Intel
 #   ./build.sh --install    build and copy to /Applications
+#   ./build.sh --version 1.2.0   stamp a version into Info.plist
 set -euo pipefail
 cd "$(dirname "$0")"
 
 APP=build/Shotshelf.app
 ARCHS=("$(uname -m)")
 INSTALL=0
-for arg in "$@"; do
-  case "$arg" in
+VERSION=""
+while [ $# -gt 0 ]; do
+  case "$1" in
     --universal) ARCHS=(arm64 x86_64) ;;
     --install) INSTALL=1 ;;
+    --version) VERSION="$2"; shift ;;
   esac
+  shift
 done
 
 rm -rf "$APP"
@@ -34,12 +38,19 @@ swiftc -O -target "$(uname -m)-apple-macos14.0" $CLI_SOURCES build/obj/main.swif
 cp Resources/rules.default.json build/
 
 cp Resources/Info.plist "$APP/Contents/Info.plist"
+if [ -n "$VERSION" ]; then
+  /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $VERSION" "$APP/Contents/Info.plist"
+  /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $VERSION" "$APP/Contents/Info.plist"
+fi
 cp Resources/rules.default.json "$APP/Contents/Resources/"
 cp Resources/AppIcon.icns "$APP/Contents/Resources/"
 # Sign with a stable local identity if you have one, so macOS remembers folder permissions across
-# rebuilds (see README). Otherwise sign ad hoc.
+# rebuilds (see README). Otherwise sign ad hoc. A Developer ID gets the hardened runtime and a
+# secure timestamp, which notarization requires.
 IDENTITY="${SHOTSHELF_SIGN_IDENTITY:-Shotshelf Local Signing}"
-if security find-identity -p codesigning 2>/dev/null | grep -q "\"$IDENTITY\""; then
+if [[ "$IDENTITY" == "Developer ID Application"* ]]; then
+  codesign --force --sign "$IDENTITY" --options runtime --timestamp "$APP"
+elif security find-identity -p codesigning 2>/dev/null | grep -q "\"$IDENTITY\""; then
   codesign --force --sign "$IDENTITY" --timestamp=none "$APP" >/dev/null
 else
   codesign --force --sign - --timestamp=none "$APP" >/dev/null

@@ -247,33 +247,41 @@ struct WelcomeView: View {
     @Environment(Library.self) private var lib
     @Environment(\.dismiss) private var dismiss
     @State private var folder = Paths.home.appendingPathComponent("Pictures/Screenshots")
+    @State private var codeFolder: URL?
     @State private var redirect = true
+    @State private var bringExisting = true
+    @State private var notify = true
+    @State private var atLogin = true
+
+    /// Where macOS saves screenshots today, usually the Desktop.
+    private let current = Paths.systemScreenshotFolder
 
     var body: some View {
         VStack(spacing: 18) {
             Image(nsImage: NSApp.applicationIconImage).resizable().frame(width: 88, height: 88)
             Text("Welcome to Shotshelf").font(.title.weight(.bold))
             Text("Every screenshot you take is read on this Mac and filed into a folder like Receipts, Development or Documents. Nothing leaves your computer.")
-                .multilineTextAlignment(.center).foregroundStyle(.secondary).frame(maxWidth: 420)
+                .multilineTextAlignment(.center).foregroundStyle(.secondary).frame(maxWidth: 440)
             GroupBox {
-                VStack(alignment: .leading, spacing: 10) {
-                    HStack {
-                        Text("Screenshots folder")
-                        Spacer()
-                        Text(AppConfig.tilde(folder)).foregroundStyle(.secondary)
-                        Button("Change...") {
-                            let panel = NSOpenPanel()
-                            panel.canChooseDirectories = true
-                            panel.canChooseFiles = false
-                            panel.canCreateDirectories = true
-                            if panel.runModal() == .OK, let url = panel.url { folder = url }
-                        }
-                    }
+                VStack(alignment: .leading, spacing: 12) {
+                    folderRow("Screenshots folder", AppConfig.tilde(folder)) { if let url = choose() { folder = url } }
                     Toggle("Save new screenshots to this folder", isOn: $redirect)
+                    if current.standardizedFileURL != folder.standardizedFileURL {
+                        Toggle("Move screenshots already in \(AppConfig.tilde(current)) into it", isOn: $bringExisting)
+                    }
+                    Divider()
+                    folderRow("Code folder (optional)", codeFolder.map(AppConfig.tilde) ?? "None") { codeFolder = choose() }
+                    Text("Screenshots of your projects are filed under Development by project name.")
+                        .font(.caption).foregroundStyle(.secondary)
+                    Divider()
+                    Toggle("Notify me after each sort, with a Move button", isOn: $notify)
+                    Toggle("Open at login", isOn: $atLogin)
                 }
                 .padding(6)
             }
-            .frame(width: 460)
+            .frame(width: 500)
+            Text("macOS may ask to let Shotshelf use folders like Desktop or Documents, and to send notifications. Allow them so sorting works in the background.")
+                .font(.caption).foregroundStyle(.secondary).multilineTextAlignment(.center).frame(maxWidth: 460)
             Button("Get Started") { finish() }
                 .buttonStyle(.borderedProminent)
                 .controlSize(.large)
@@ -282,12 +290,42 @@ struct WelcomeView: View {
         .padding(32)
     }
 
+    private func folderRow(_ label: String, _ value: String, action: @escaping () -> Void) -> some View {
+        HStack {
+            Text(label)
+            Spacer()
+            Text(value).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
+            Button("Choose...", action: action)
+        }
+    }
+
+    private func choose() -> URL? {
+        let panel = NSOpenPanel()
+        panel.canChooseDirectories = true
+        panel.canChooseFiles = false
+        panel.canCreateDirectories = true
+        return panel.runModal() == .OK ? panel.url : nil
+    }
+
     private func finish() {
-        try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
-        AppConfig.write(["screenshots_dir": AppConfig.tilde(folder), "projects_dirs": [String](), "extra_rules": [[String: Any]]()])
-        if redirect { pointSystemScreenshots(to: folder) }
+        let fm = FileManager.default
+        // A custom config file (tests, demos) never changes system-wide settings or moves files.
+        let isolated = ProcessInfo.processInfo.environment["SHOTSHELF_CONFIG"] != nil
+        try? fm.createDirectory(at: folder, withIntermediateDirectories: true)
+        AppConfig.write(["screenshots_dir": AppConfig.tilde(folder),
+                         "projects_dirs": codeFolder.map { [AppConfig.tilde($0)] } ?? [String](),
+                         "extra_rules": [[String: Any]]()])
+        if !isolated && bringExisting && current.standardizedFileURL != folder.standardizedFileURL {
+            // Only files named like screenshots, from the top of that folder; everything else stays.
+            let files = (try? fm.contentsOfDirectory(at: current, includingPropertiesForKeys: nil, options: .skipsHiddenFiles)) ?? []
+            for f in files where ShotFile.isImage(f) && ShotFile.isScreenshotName(f.lastPathComponent) {
+                try? fm.moveItem(at: f, to: ShotFile.uniqueDestination(in: folder, name: f.lastPathComponent))
+            }
+        }
+        if redirect && !isolated { pointSystemScreenshots(to: folder) }
+        Notifier.shared.enabled = notify
         dismiss()
         lib.reloadConfig()
-        lib.opensAtLogin = true
+        if !isolated { lib.opensAtLogin = atLogin }
     }
 }

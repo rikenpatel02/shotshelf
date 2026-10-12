@@ -82,6 +82,11 @@ enum ShotFile {
         pattern: "^(?:Screenshot|Screen Shot|CleanShot)\\s+(\\d{4})-(\\d{2})-(\\d{2})\\s+at\\s+(\\d{1,2})[.:](\\d{2})[.:](\\d{2})\\s*([AP]M)?",
         options: .caseInsensitive)
 
+    /// Named like a screenshot from macOS or CleanShot.
+    static func isScreenshotName(_ name: String) -> Bool {
+        nameDate.firstMatch(in: name, range: NSRange(name.startIndex..., in: name)) != nil
+    }
+
     static func isImage(_ url: URL) -> Bool {
         imageExtensions.contains(url.pathExtension.lowercased()) && !url.lastPathComponent.hasPrefix(".")
     }

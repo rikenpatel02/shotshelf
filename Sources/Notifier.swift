@@ -21,10 +21,11 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
         let move = UNNotificationAction(identifier: "move", title: "Move...", options: [.foreground])
         let show = UNNotificationAction(identifier: "show", title: "Show", options: [.foreground])
         center.setNotificationCategories([UNNotificationCategory(identifier: category, actions: [move, show], intentIdentifiers: [])])
-        if enabled { requestPermission() }
+        // On first run the welcome sheet asks, after explaining why.
+        if enabled && AppConfig.exists { requestPermission() }
     }
 
-    private func requestPermission() {
+    func requestPermission() {
         center.requestAuthorization(options: [.alert, .sound]) { _, _ in }
     }
 

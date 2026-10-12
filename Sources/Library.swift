@@ -108,7 +108,7 @@ final class Library {
     // MARK: lifecycle
 
     func start() {
-        try? FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        if AppConfig.exists { try? FileManager.default.createDirectory(at: root, withIntermediateDirectories: true) }
         if hotKey == nil {
             Notifier.shared.setUp()
             Notifier.shared.onShow = { [weak self] path in self?.showWindow(); self?.focus(path, open: true) }
@@ -126,6 +126,8 @@ final class Library {
                 if let newest = self.visible.first { self.open(newest) }
             }
         }
+        // First run: touch no folder until the welcome sheet says which one to use.
+        guard AppConfig.exists else { loaded = true; return }
         reload()
         watcher = FolderWatcher(path: root.path) { [weak self] paths in self?.filesChanged(paths) }
         watcher?.start()
