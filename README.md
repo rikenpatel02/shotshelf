@@ -45,6 +45,12 @@ Take a screenshot of a receipt and it lands in `Receipts/Food & Dining/Chipotle`
 
 **[Download the latest Shotshelf.dmg](https://github.com/rikenpatel02/shotshelf/releases/latest)**, open it and drag Shotshelf onto Applications. Requires macOS 14 Sonoma or later, on Apple silicon or Intel.
 
+Or with [Homebrew](https://brew.sh):
+
+```bash
+brew install --cask rikenpatel02/tap/shotshelf
+```
+
 Releases are signed with a Developer ID and notarized by Apple, so macOS opens them normally.
 
 ### First launch
