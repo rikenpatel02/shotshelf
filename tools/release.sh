@@ -4,6 +4,7 @@
 #
 # Signing and notarization are optional and happen when these are set:
 #   SHOTSHELF_SIGN_IDENTITY   "Developer ID Application: Your Name (TEAMID)"
+#   NOTARY_KEY, NOTARY_KEY_ID, NOTARY_ISSUER      an App Store Connect API key (.p8 path), or
 #   NOTARY_PROFILE            a profile saved with `xcrun notarytool store-credentials`, or
 #   APPLE_ID, APPLE_TEAM_ID, APPLE_APP_PASSWORD   (an app-specific password)
 # Without them the DMG holds an ad hoc signed app, which macOS asks people to approve once.
@@ -29,7 +30,9 @@ hdiutil create -volname "Shotshelf $VERSION" -srcfolder "$STAGE" -fs HFS+ -forma
 
 if [[ "${SHOTSHELF_SIGN_IDENTITY:-}" == "Developer ID Application"* ]]; then
   codesign --force --sign "$SHOTSHELF_SIGN_IDENTITY" --timestamp "$DMG"
-  if [ -n "${NOTARY_PROFILE:-}" ]; then
+  if [ -n "${NOTARY_KEY:-}" ] && [ -n "${NOTARY_KEY_ID:-}" ] && [ -n "${NOTARY_ISSUER:-}" ]; then
+    AUTH=(--key "$NOTARY_KEY" --key-id "$NOTARY_KEY_ID" --issuer "$NOTARY_ISSUER")
+  elif [ -n "${NOTARY_PROFILE:-}" ]; then
     AUTH=(--keychain-profile "$NOTARY_PROFILE")
   elif [ -n "${APPLE_ID:-}" ]; then
     AUTH=(--apple-id "$APPLE_ID" --team-id "$APPLE_TEAM_ID" --password "$APPLE_APP_PASSWORD")
@@ -38,8 +41,12 @@ if [[ "${SHOTSHELF_SIGN_IDENTITY:-}" == "Developer ID Application"* ]]; then
     echo "Notarizing (this usually takes a few minutes)..."
     xcrun notarytool submit "$DMG" "${AUTH[@]}" --wait
     xcrun stapler staple "$DMG"
+    # Gatekeeper's own verdict on the shipped app, as a downloader's Mac will see it.
+    MOUNT=$(hdiutil attach -nobrowse -readonly "$DMG" | tail -1 | cut -f3)
+    spctl --assess --type execute -vv "$MOUNT/Shotshelf.app"
+    hdiutil detach -quiet "$MOUNT"
   else
-    echo "Signed with a Developer ID but not notarized: set NOTARY_PROFILE or APPLE_ID to notarize."
+    echo "Signed with a Developer ID but not notarized: set NOTARY_KEY, NOTARY_PROFILE or APPLE_ID to notarize."
   fi
 else
   echo "Not signed with a Developer ID: macOS will ask people to approve the app once (see README)."

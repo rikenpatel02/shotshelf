@@ -45,12 +45,7 @@ Take a screenshot of a receipt and it lands in `Receipts/Food & Dining/Chipotle`
 
 **[Download the latest Shotshelf.dmg](https://github.com/rikenpatel02/shotshelf/releases/latest)**, open it and drag Shotshelf onto Applications. Requires macOS 14 Sonoma or later, on Apple silicon or Intel.
 
-The download is not notarized by Apple yet, so macOS stops it the first time you open it:
-
-- **macOS 15 Sequoia and later:** click **Done**, open **System Settings > Privacy & Security**, scroll to the message about Shotshelf and click **Open Anyway**.
-- **macOS 14 Sonoma:** Control-click Shotshelf in Applications, choose **Open**, then **Open** again.
-
-You only do this once.
+Releases are signed with a Developer ID and notarized by Apple, so macOS opens them normally.
 
 ### First launch
 
@@ -90,7 +85,9 @@ Push a version tag and GitHub Actions builds a universal `Shotshelf-VERSION.dmg`
 git tag v1.0.1 && git push origin v1.0.1
 ```
 
-`tools/release.sh 1.0.1` does the same locally, into `dist/`. To ship a build that opens without the warning above, add a Developer ID certificate and notarization credentials as repository secrets (see [`.github/workflows/release.yml`](.github/workflows/release.yml)); the workflow signs and notarizes automatically when they are present.
+`tools/release.sh 1.0.1` does the same locally, into `dist/`.
+
+Signing and notarization need an Apple Developer Program membership and run automatically when these repository secrets exist: `MACOS_CERTIFICATE` (base64 of a Developer ID Application `.p12`), `MACOS_CERTIFICATE_PASSWORD`, `SIGN_IDENTITY`, and an App Store Connect API key for notarization: `APPSTORE_API_KEY` (base64 `.p8`), `APPSTORE_API_KEY_ID`, `APPSTORE_API_ISSUER`. An app-specific password (`APPLE_ID`, `APPLE_TEAM_ID`, `APPLE_APP_PASSWORD`) works instead of the API key. Without them the DMG is ad hoc signed, and macOS asks people to approve it once in **System Settings > Privacy & Security > Open Anyway**.
 
 ## Configuration
 
