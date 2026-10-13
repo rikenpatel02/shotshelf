@@ -10,6 +10,8 @@ Take a screenshot of a receipt and it lands in `Receipts/Food & Dining/Chipotle`
 - **Real folders.** Sorting moves files into ordinary folders, so Finder, Spotlight and backups keep working. Quit Shotshelf and everything stays put.
 - **Native and light.** SwiftUI, about 2 MB, no dependencies. Lives in the menu bar and starts at login.
 
+<p align="center"><img src="docs/images/demo.webp" alt="Eight new screenshots land in the folder and are filed into Receipts, Development, AI Chats, Maps and Chats within seconds; then a search for netflix finds the Netflix receipt" width="100%"></p>
+
 ## Features
 
 **Sorting**
